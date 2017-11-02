@@ -1,16 +1,27 @@
 #include <stdio.h>
 #include <string.h>
-
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <linux/limits.h>
-
+#include <sys/wait.h>
 #include "built_in.h"
-
+#include "commands.h"
 int do_cd(int argc, char** argv) {
+  char *home_dir; 
+ 
   if (!validate_cd_argv(argc, argv))
     return -1;
+
+  if(strcmp(argv[1],"~") ==0)
+  { 
+    home_dir = getenv("HOME");
+    if(chdir(home_dir) == -1)
+      return -1;
+   return 0;
+  }
+
 
   if (chdir(argv[1]) == -1)
     return -1;
@@ -35,8 +46,11 @@ int do_pwd(int argc, char** argv) {
 int do_fg(int argc, char** argv) {
   if (!validate_fg_argv(argc, argv))
     return -1;
-
-  // TODO: Fill this.
+  int status;
+  printf("%d\n",getpid());
+  printf("%d\n",pidnumber);
+  // waitpid(pidnumber,&status,WNOHANG);  
+  printf("%d\n",getpid());
 
   return 0;
 }
@@ -47,7 +61,10 @@ int validate_cd_argv(int argc, char** argv) {
 
   struct stat buf;
   stat(argv[1], &buf);
-
+  //
+  if(strcmp(argv[1],"~")==0)
+   return -1;
+  //
   if (!S_ISDIR(buf.st_mode)) return 0;
 
   return 1;

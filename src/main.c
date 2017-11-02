@@ -16,14 +16,13 @@ int main()
     struct single_command commands[512];
     int n_commands = 0;
     mysh_parse_command(buf, &n_commands, &commands);
-
     int ret = evaluate_command(n_commands, &commands);
-
+    
     free_commands(n_commands, &commands);
     n_commands = 0;
 
     if (ret == 1) {
-      break;
+       break;
     }
   }
 

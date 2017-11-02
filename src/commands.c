@@ -2,9 +2,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-
+#include <unistd.h>
 #include "commands.h"
 #include "built_in.h"
+#include <sys/wait.h>
+#include <sys/types.h>
+
 
 static struct built_in_command built_in_commands[] = {
   { "cd", do_cd, validate_cd_argv },
@@ -25,15 +28,68 @@ static int is_built_in_command(const char* command_name)
   return -1; // Not found
 }
 
+
+
 /*
  * Description: Currently this function only handles single built_in commands. You should modify this structure to launch process and offer pipeline functionality.
  */
 int evaluate_command(int n_commands, struct single_command (*commands)[512])
-{
-  if (n_commands > 0) {
+{ pidnumber = 0;
+  int pid,status;//pid
+  char a[1];
+  int pidstore;
+  
+  if (n_commands > 0){
+    
+   if(n_commands != 1)
+  {
+    for(int i=0; i<n_commands; i++)
+    {
+      struct single_command* com = (*commands)+i;
+      if((pid=fork()) == -1)
+        printf("forked fail\n");
+      else if(pid !=0) {wait(&status);}
+      else{
+        if(execv(com->argv[0], com->argv)== -1)
+        {printf("erroe execution\n"); exit(1);}}
+    }
+    return 0;
+   } 
     struct single_command* com = (*commands);
-
     assert(com->argc != 0);
+    strncpy(a,&com->argv[0][0],1); //copy first one
+    
+    //for process creation
+    if(strcmp("/",a) == 0)
+      {
+       printf("process creation start\n");
+       if((pid=fork()) == -1)
+         printf("fork failed\n");
+       else if(pid != 0)
+        {printf("%d\n",pid);
+         pid=wait(&status); }
+       else{
+        if(execv(com->argv[0] , com->argv)==-1) //
+          {printf("error execution\n");  exit(1); }  }      
+      return 0;
+     }
+  // for path
+   if(strcmp(com->argv[0],"ls") == 0 || strcmp(com->argv[0],"cat") == 0 || strcmp(com->argv[0],"vim") ==0)
+   {
+    if((pid=fork()) == -1)
+      printf("fork failed\n");
+    else if(pid != 0 )
+      pid=wait(&status);
+    else{    
+       if(strcmp(com->argv[0],"ls") == 0)
+        {execv("/bin/ls",com->argv); } //ls
+       else if(strcmp(com->argv[0],"cat")==0)
+        {execv("/bin/cat",com->argv);}//cat
+       else if(strcmp(com->argv[0],"vim")==0)
+       {execv("/usr/bin/vim",com->argv);} //vim
+        }
+    return 0;
+   }
 
     int built_in_pos = is_built_in_command(com->argv[0]);
     if (built_in_pos != -1) {
@@ -54,7 +110,7 @@ int evaluate_command(int n_commands, struct single_command (*commands)[512])
       return -1;
     }
   }
-
+  
   return 0;
 }
 
