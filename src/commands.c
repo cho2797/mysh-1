@@ -7,7 +7,7 @@
 #include "built_in.h"
 #include <sys/wait.h>
 #include <sys/types.h>
-
+#include <sys/socket.h>
 
 static struct built_in_command built_in_commands[] = {
   { "cd", do_cd, validate_cd_argv },
@@ -38,23 +38,64 @@ int evaluate_command(int n_commands, struct single_command (*commands)[512])
   int pid,status;//pid
   char a[1];
   int pidstore;
-  
+  fflush(stdin);
+  fflush(stdout);  
   if (n_commands > 0){
-    
-   if(n_commands != 1)
+     
+   if(n_commands == 2)
   {
-    for(int i=0; i<n_commands; i++)
+    struct single_command* com = (*commands);
+     
+    int sockets[2], rc;
+    char buf[256];
+    memset(buf,0,sizeof(buf));
+    pid_t pid; 
+    rc = socketpair(AF_UNIX, SOCK_STREAM, 0, sockets);
+    if(rc== -1)
+     {printf("error opening socket pair\n");
+      exit(1);
+     }
+
+    pid=fork();
+    if(pid == -1)
+
+     { printf("fork error\n");}
+    else if(pid ==0)
     {
-      struct single_command* com = (*commands)+i;
-      if((pid=fork()) == -1)
-        printf("forked fail\n");
-      else if(pid !=0) {wait(&status);}
-      else{
-        if(execv(com->argv[0], com->argv)== -1)
-        {printf("erroe execution\n"); exit(1);}}
+      dup2(sockets[0],1);
+      close(sockets[0]);
+      close(sockets[1]);
+      if(execv(com->argv[0], com->argv)==-1)
+        { printf("error execution\n"); exit(1);}
     }
+    else
+    { wait(&status);
+      close(sockets[0]);
+      dup2(sockets[1],0);   //
+      close(sockets[1]);    //
+      rc = read(sockets[1],buf,sizeof(buf));
+      printf("buffer: %s\n",buf);
+
+      
+      com = (*commands)+1;
+  //   printf("\n%s\n",com->argv[0]);
+  //   (com->argv)[com->argc]=(char*)malloc(sizeof(buf));
+  //   strcpy((com->argv)[com->argc],buf);
+       close(sockets[1]);
+      
+      for(int i=0; i<com->argc; i++)
+     {printf("%s\n",com->argv[i]);}
+    
+      if(execv(com->argv[0],com->argv)==-1)
+       {printf("second error\n"); exit(1);}
+      return 0;
+       
+    }
+    
     return 0;
-   } 
+  }//
+
+ 
     struct single_command* com = (*commands);
     assert(com->argc != 0);
     strncpy(a,&com->argv[0][0],1); //copy first one
