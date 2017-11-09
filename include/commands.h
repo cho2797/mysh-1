@@ -12,5 +12,7 @@ int evaluate_command(int n_commands, struct single_command (*commands)[512]);
 void free_commands(int n_commands, struct single_command (*commands)[512]);
 
 
-int pidnumber;
+int pidnumber; //pid number for backgorund process
+char instruction[256];//instruction for background process
+
 #endif // MYSH_COMMANDS_H_
