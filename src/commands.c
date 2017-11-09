@@ -67,7 +67,8 @@ int evaluate_command(int n_commands, struct single_command (*commands)[512])
       } else {
         fprintf(stderr, "%s: Invalid arguments\n", com->argv[0]);
         return -1;
-      }
+     }
+    return 0;
     }//cd ,pwd, fg implementation
     else if (strcmp(com->argv[0], "") == 0) {
       return 0; //" "
@@ -84,6 +85,8 @@ int evaluate_command(int n_commands, struct single_command (*commands)[512])
   else if(strcmp(com->argv[0],"ls")==0 || strcmp(com->argv[0],"cat")==0 || strcmp(com->argv[0],"vim")==0) flag=2;//path
   else if(strcmp("&",com->argv[(com->argc-1)])==0) flag =3; //bg
   else flag = 4; //process creation
+
+  printf("flag is %d\n",flag);
 
   switch(flag){
 
@@ -117,7 +120,8 @@ int evaluate_command(int n_commands, struct single_command (*commands)[512])
        close(sockets[1]);
        if(execv(com->argv[0],com->argv)==-1) 
           {printf("second error\n"); exit(1);}
-  //    return 0;
+      printf("finish\n");
+      return 0;
 
     }  return 0;
   }break;
