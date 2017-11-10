@@ -34,9 +34,12 @@ void sigchld(int signo)
 {  
   int status, pid;
    if((pid = waitpid(-1,&status, 0)) != -1)
-   {printf("%d done\n",pid);}
-
+    { background[0].pidnumber = pid;
+      background[0].flag = 1;
+      printf("%d done %s\n",background[0].pidnumber, background[0].instruction);
+    }
 }
+
 
 /*
  * Description: Currently this function only handles single built_in commands. You should modify this structure to launch process and offer pipeline functionality.
@@ -149,26 +152,32 @@ int evaluate_command(int n_commands, struct single_command (*commands)[512])
   case 3:
   //bg
    {
-      printf("bg start\n");
      char buf[256];
      memset(buf,0,sizeof(buf));
      com->argv[com->argc-1]=NULL;
      com->argc = com->argc -1;
      signal(SIGCHLD,sigchld);
     
+      memset(background[0].instruction,0,sizeof(background[0].instruction));
+      background[0].pidnumber =0;  background[0].flag=0;
+      
      if((pid=fork()) == -1)
        printf("fork failed\n");
      else if(pid != 0)
       { 
+       
+       strcpy(background[0].instruction,com->argv[0]);
        while(1){
+       
        fgets(buf,8096,stdin);       
        struct single_command commands2[512];
        int n_commands2 = 0;
        mysh_parse_command(buf, &n_commands2, &commands2);
-       //int built_in_pos2 = is_built_in_command(commands2->argv[0]);
+        
+      
        if(commands2->argc !=0)
       {
-
+        
        if(strcmp(commands2->argv[0],"cd") == 0 )
          do_cd(commands2->argc,commands2->argv); 
        else if(strcmp(commands2->argv[0],"pwd")==0)
@@ -183,26 +192,25 @@ int evaluate_command(int n_commands, struct single_command (*commands)[512])
           {printf("error execution\n"); }
         }
 
-       }
-
+       
+      }
+      /*
+   
+        int ret = evaluate_command(n_commands2, &commands2);
+        
         free_commands(n_commands2, &commands2);
         n_commands2 = 0;
+        if(ret == 1){ break;}  
         }
-        //pa
-      }
-     else
-      { memset(instruction,0,sizeof(instruction));
+    */
+      //wihle
+    }}
+    else
+      {
         printf("%d\n",getpid());
-        pidnumber = getpid(); //
-        strcpy(instruction,com->argv[0]); //
-        printf("number: %d, instruction: %s\n",pidnumber,instruction);
-
         if(execv(com->argv[0],com->argv)== -1)
           {printf("error execution\n"); exit(1);}
-
       }
-   if((pid=waitpid(-1,&status,0)) != -1)
-     printf("2  2  %d done\n",pid);
 
    return 0;
   }//bg 
@@ -222,7 +230,7 @@ int evaluate_command(int n_commands, struct single_command (*commands)[512])
    return 0; 
   }break;
  }//switch 
-  
+  return 0;
  }
  return 0;
 }

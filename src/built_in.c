@@ -56,10 +56,10 @@ int do_fg(int argc, char** argv) {
     
   pid = waitpid(-1,&status, WNOHANG);
   if(pid != -1)
-    printf("%d running\n",pid);
-  else printf("%d done\n",pid);
+    printf("%d running %s \n",background[0].pidnumber, background[0].instruction);
+  else printf(" done %s\n", background[0].instruction);
 
-  return 0;
+   return 0;
 }
 
 int validate_cd_argv(int argc, char** argv) {
