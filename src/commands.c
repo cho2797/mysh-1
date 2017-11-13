@@ -1,3 +1,4 @@
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -101,99 +102,8 @@ printf("before close socket  client \n");
  close(client_sock);
  return 0;
 }
+void *server_side(void *com);
 
-/*server side*/
-int server_side(struct single_command *com){
- printf("server start         server\n");
- int server_sock, client_sock, len, rc;
- int bytes_rec=0;
- struct sockaddr_un server_sockaddr;
- struct sockaddr_un client_sockaddr;
- char buf[256];
- int backlog =10;
-// char *arg[]={"/bin/grep","tpf",(char *)0};
-
-
- memset(&server_sockaddr, 0, sizeof(struct sockaddr_un));
- memset(&client_sockaddr, 0, sizeof(struct sockaddr_un));
- memset(buf, 0, 256);
-
-
-//creat a unix domain stream socket //
-
- server_sock = socket(AF_UNIX, SOCK_STREAM, 0);
- if(server_sock == -1){
-  printf("socket error\n");
-  exit(1); }
-
-
- server_sockaddr.sun_family = AF_UNIX;
- strcpy(server_sockaddr.sun_path, SOCK_PATH);
- len = sizeof(server_sockaddr);
-
- unlink(SOCK_PATH);//
-
- rc = bind(server_sock, (struct sockaddr *) &server_sockaddr, len);
- if(rc == -1){
-   printf("bind error\n");
-   close(server_sock);
-   exit(1);
- }
-
- printf("waiting for listen               server\n");
-//listen for any client sockets//
-
- rc= listen(server_sock, backlog);
- if(rc == -1){
-  printf("listen error \n");
-  close(server_sock);
-  exit(1);
-  }
-
-//accept an incoming connection//
-printf("accepting an incoming data              server\n");
- client_sock = accept(server_sock, (struct sockaddr *) &client_sockaddr, &len);
- if(client_sock == -1){
-  printf("accept error\n");
-  close(server_sock);
-  close(client_sock);
-  exit(1);
-  }
-
-printf("get a name of the connected socket           server\n");
-//get a neme of the xonnexted socket
- len = sizeof(client_sockaddr);
- rc = getpeername(client_sock, (struct sockaddr *) &client_sockaddr, &len);
- if(rc == -1){
-  printf("gerpeername error\n");
-  close(server_sock);
-  close(client_sock);
-  exit(1);
-  }
- else { printf("client socket filepath: %s\n",client_sockaddr.sun_path);
- }
-
-dup2(client_sock,0);
-// reand and print
- printf("read data                     server\n");
-
-if(execv(com->argv[0],com->argv)==-1)
-{  printf("error in 2nd\n");
-   rc = recv(client_sock, buf, sizeof(buf), 0);
-   printf("buf is: %s\n",buf);
-   (com->argv)[com->argc] = (char*)malloc(sizeof(buf));   
-   strcpy((com->argv)[com->argc],buf);
-   if(execv(com->argv[0],com->argv) == -1)
-    {printf("error really\n"); exit(1);}
-}
-
- memset(buf,0,256);
-
- close(server_sock);
- close(client_sock);
-
- return 0;
-}
 
 /*
  * Description: Currently this function only handles single built_in commands. You should modify this structure to launch process and offer pipeline functionality.
@@ -250,27 +160,37 @@ int evaluate_command(int n_commands, struct single_command (*commands)[512])
   case 1:                      
   //ipc
   {
-	int pid, status;
+        int thread_id;
+        pthread_t p_thread[1]; 
+        int threadstatus;
+	int pid, status, status2;
 	printf("start\n");
-        printf("argv[0] = %s\n",com->argv[0]);
 	if((pid=fork())==-1)
 	  printf("error\n");
 	else if(pid != 0)
-	 {
- 	 waitpid(-1,&status,WNOHANG);
- 	 com = (*commands)+1;
-         
-         server_side(com);
-	
-         printf("server end\n");
- 	 wait(&status);
+        {
+ 	    wait(&status);
 	}//parent
 	else
 	{
 
-	client_side(com);
-	printf("clinet end\n");
-
+           if((pid=fork()) == -1)
+              printf("error\n");
+           else if(pid != 0)
+             {
+               waitpid(-1,&status2, WNOHANG);
+               com = (*commands)+1;
+	       thread_id = pthread_create(&p_thread[0],NULL, server_side, (void *)com);
+      	        if(thread_id <0)
+                   {printf("thread error\n"); exit(1);}
+                pthread_join(p_thread[0], (void **)&threadstatus);
+                printf("server end\n");
+               wait(&status2);
+             }
+           else{
+		client_side(com);
+		printf("clinet end\n");
+                }
 	}
 	return 0;
 
@@ -402,4 +322,95 @@ void free_commands(int n_commands, struct single_command (*commands)[512])
 
 
 
+void *server_side(void *com2){
+ struct single_command *com = (struct single_command *)com2;
+ printf("server start         server\n");
+ int server_sock, client_sock, len, rc;
+ int bytes_rec=0;
+ struct sockaddr_un server_sockaddr;
+ struct sockaddr_un client_sockaddr;
+ char buf[256];
+ int backlog =10;
+// char *arg[]={"/bin/grep","tpf",(char *)0};
+
+
+ memset(&server_sockaddr, 0, sizeof(struct sockaddr_un));
+ memset(&client_sockaddr, 0, sizeof(struct sockaddr_un));
+ memset(buf, 0, 256);
+
+
+//creat a unix domain stream socket //
+
+ server_sock = socket(AF_UNIX, SOCK_STREAM, 0);
+ if(server_sock == -1){
+  printf("socket error\n");
+  exit(1); }
+
+
+ server_sockaddr.sun_family = AF_UNIX;
+ strcpy(server_sockaddr.sun_path, SOCK_PATH);
+ len = sizeof(server_sockaddr);
+
+ unlink(SOCK_PATH);//
+
+ rc = bind(server_sock, (struct sockaddr *) &server_sockaddr, len);
+ if(rc == -1){
+   printf("bind error\n");
+   close(server_sock);
+   exit(1);
+ }
+
+ printf("waiting for listen               server\n");
+//listen for any client sockets//
+
+ rc= listen(server_sock, backlog);
+ if(rc == -1){
+  printf("listen error \n");
+  close(server_sock);
+  exit(1);
+  }
+
+//accept an incoming connection//
+printf("accepting an incoming data              server\n");
+ client_sock = accept(server_sock, (struct sockaddr *) &client_sockaddr, &len);
+ if(client_sock == -1){
+  printf("accept error\n");
+  close(server_sock);
+  close(client_sock);
+  exit(1);
+  }
+
+printf("get a name of the connected socket           server\n");
+//get a neme of the xonnexted socket
+ len = sizeof(client_sockaddr);
+ rc = getpeername(client_sock, (struct sockaddr *) &client_sockaddr, &len);
+ if(rc == -1){
+  printf("gerpeername error\n");
+  close(server_sock);
+  close(client_sock);
+  exit(1);
+  }
+ else { printf("client socket filepath: %s\n",client_sockaddr.sun_path);
+ }
+
+dup2(client_sock,0);
+// reand and print
+ printf("read data                     server\n");
+if(execv(com->argv[0],com->argv)==-1)
+{  printf("error in 2nd\n");
+   rc = recv(client_sock, buf, sizeof(buf), 0);
+   printf("buf is: %s\n",buf);
+   (com->argv)[com->argc] = (char*)malloc(sizeof(buf));
+   strcpy((com->argv)[com->argc],buf);
+   if(execv(com->argv[0],com->argv) == -1)
+    {printf("error really\n"); exit(1);}
+}
+
+ memset(buf,0,256);
+
+ close(server_sock);
+ close(client_sock);
+
+ return 0;
+}
 
