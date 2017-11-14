@@ -263,7 +263,7 @@ int evaluate_command(int n_commands, struct single_command (*commands)[512])
        else 
         { 
          if(execv(commands2->argv[0], commands2->argv) == -1)
-          {printf("error execution\n"); }
+          {printf("error execution in background process\n"); }
         }
 
        

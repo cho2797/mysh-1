@@ -12,8 +12,7 @@ void catch_sigint(int signalNo)
 
 void catch_sigtstp(int signalNo)
 {
-  printf("ctrl + z\n");
-  signal(SIGTSTP,SIG_IGN);
+    signal(SIGTSTP,SIG_IGN);
   // TODO: File this!
 }
 
