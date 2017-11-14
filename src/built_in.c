@@ -57,7 +57,7 @@ int do_fg(int argc, char** argv) {
   pid = waitpid(-1,&status, WNOHANG);
   if(pid != -1)
     printf("%d running %s \n",background[0].pidnumber, background[0].instruction);
-  else printf(" done %s\n", background[0].instruction);
+  else printf("done %s\n", background[0].instruction);
 
    return 0;
 }

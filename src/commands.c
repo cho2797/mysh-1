@@ -43,6 +43,7 @@ void sigchld(int signo)
       background[0].flag = 1;
       printf("%d done %s\n",background[0].pidnumber, background[0].instruction);
     }
+ 
 }
 /* client side */
 int client_side(struct single_command *com){
@@ -225,7 +226,7 @@ int evaluate_command(int n_commands, struct single_command (*commands)[512])
   
   case 3:
   //bg
-   {
+   { int status;
      char buf[256];
      memset(buf,0,sizeof(buf));
      com->argv[com->argc-1]=NULL;
@@ -234,16 +235,15 @@ int evaluate_command(int n_commands, struct single_command (*commands)[512])
     
       memset(background[0].instruction,0,sizeof(background[0].instruction));
       background[0].pidnumber =0;  background[0].flag=0;
-      
+     
+     
      if((pid=fork()) == -1)
        printf("fork failed\n");
      else if(pid != 0)
       { 
        
-       strcpy(background[0].instruction,com->argv[0]);
-       while(1){
-       
-       fgets(buf,8096,stdin);       
+       while(buf[0] == 0)
+        {fgets(buf,8096,stdin); }      
        struct single_command commands2[512];
        int n_commands2 = 0;
        mysh_parse_command(buf, &n_commands2, &commands2);
@@ -268,17 +268,19 @@ int evaluate_command(int n_commands, struct single_command (*commands)[512])
 
        
       }
-         }
+
+       free_commands(n_commands2, &commands2);
+      }
     
       //wihle
-    }
+    
     else
       {
         printf("%d\n",getpid());
         if(execv(com->argv[0],com->argv)== -1)
           {printf("error execution\n"); exit(1);}
       }
-
+    
    return 0;
   }//bg 
   break;
@@ -289,7 +291,7 @@ int evaluate_command(int n_commands, struct single_command (*commands)[512])
     if((pid=fork()) == -1)
        printf("fork failed\n");
     else if(pid != 0)
-       {printf("%d\n",pid);
+       {// printf("%d\n",pid);
         pid=wait(&status); }
    else{
      if(execv(com->argv[0] , com->argv)==-1) //
